@@ -96,7 +96,7 @@ ECHO =============== Backup %pi_nicename% disk to image file %win_shared%  =====
 REM  The following linux commands inside the DOuble quotes can be put into a shell script and run locally on the pi.
 REM WIP, Need to find a better way of detecting if you are copying to the local pi or the remote Windows machine. No win login, then your probably stil on the pi.
 
-SET piMountBkupScript=" [ ! -d %pi_winshare% ] && mkdir %pi_winshare% ; [ -d %win_shared% ] ;  sudo mount.cifs %win_shared% %pi_winshare% -o user=%win_user% ; cd %pi_winshare% ; ls -l ; echo START of backup, please wait ; sudo -S dd bs=4M if=/dev/mmcblk0 status=progress of=%pi_winshare%/%nicename%.img ; echo COMPLETED backup ; bash "
+SET piMountBkupScript=" [ ! -d %pi_winshare% ] && mkdir %pi_winshare% ; [ -d %win_shared% ] ;  sudo mount.cifs %win_shared% %pi_winshare% -o user=%win_user% ; cd %pi_winshare% ; ls -l ; echo START of backup, please wait ; sudo -S dd bs=4M if=/dev/mmcblk0 status=progress of=%pi_winshare%/%nicenfileame%.img ; echo COMPLETED backup ; bash "
 
 ssh -t  %pi_ssh% %piMountBkupScript%
 GOTO END
