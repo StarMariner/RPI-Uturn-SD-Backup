@@ -21,25 +21,31 @@ REM Prerequisites. None needed as of October 2020 . Windows 10, SSH is now built
 REM Sort ssh timeout. May be ping or something? NSlookup is good but it doesnt show if its live or dead.
 
 :BEGIN
+setlocal enabledelayedexpansion 
+
+
 
 REM [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
 REM [[[[[[[[[[[[[ CHANGE SET VALUES TO MATCH YOUR DEVICES ]]]]]]]]]]]
 REM [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
 
 REM Replace windows shared folder name below to match yours. Manually remove any leftside characters before //. eg. SET win_shared=//machine/shared_folder
-SET win_shared=//WINDOWSMACHINE/Raspberry_pi_SHARED_FOLDER
-SET win_user=USERNAME_WINDOWS
-
+SET win_shared=//ExampleMachineName/Shared_Folder
+SET win_user=ExampleUser
+REM mountpoint on pi 
 SET pi_winshare=~/winshare
 
-SET pi1_user=pi
-SET pi1_ip=192.168.1.100
+REM Add as many Pis as you like , but make sure LastPi=x value is the last UserPI[x] and last ipPI[x]
+SET UserPI[1]=pi
+SET ipPI[1]=192.168.1.24
 
-SET pi2_user=pi
-SET pi2_ip=192.168.1.102
+SET UserPI[2]=pi
+SET ipPI[2]=192.168.1.110
 
-SET pi3_user=pi
-SET pi3_ip=192.168.1.104
+SET UserPI[3]=pi
+SET ipPI[3]=192.168.1.112
+
+SET LastPI=3
 
 REM [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
 REM [[[[[[[[[[[[ DONT MAKE ANY CHANGES BEYOND THIS POINT ]]]]]]]]]]]]
@@ -48,72 +54,50 @@ REM [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]
 
 
 
-SET pi1_ssh=%pi1_user%@%pi1_ip%
-SET pi1_nicename=--UNKNOWN--
-FOR /f "tokens=2" %%i IN ('nslookup %%pi1_ip%% ^| findstr /C:"Name"') DO SET pi1_nicename=%%i
-
-SET pi2_ssh=%pi2_user%@%pi2_ip%
-SET pi2_nicename=--UNKNOWN--
-FOR /f "tokens=2" %%p IN ('nslookup %%pi2_ip%% ^| findstr /C:"Name"') DO SET pi2_nicename=%%p
-
-SET pi3_ssh=%pi3_user%@%pi3_ip%
-SET pi3_nicename=--UNKNOWN--
-FOR /f "tokens=2" %%k IN ('nslookup %%pi3_ip%% ^| findstr /C:"Name"') DO SET pi3_nicename=%%k
-
 CLS 
 
 ECHO -------------------- WIN to PI to WIN . DISK to IMAGE BACKUP  ------------------------
 ECHO/
-
-
-ECHO/
 ECHO INSTRUCTIONS
 ECHO *. You must enable Windows sharing for the Destination Folder. 
 ECHO *. Edit this BAT file. Change SET values to match your devices.
-ECHO *. Select A device to backup
+ECHO *. Select a device [x] to backup
 ECHO *. Check Source and Destination. If there are errors check this BAT file.
 ECHO *. Enter the passwords for the Source and Destination.
 ECHO *. Wait for the automated script to connect to the source. It then creates a disk image on the destination.
-
-IF NOT EXIST %win_shared% ECHO *** STOP BROKEN PATH*** : SET win_shared=%win_shared% 
+ECHO    To quit Type Ctrl+C or Ctrl+break  
+IF NOT EXIST %win_shared% ECHO *** STOP. =FIX THIS BROKEN PATH  *** SET win_shared=%win_shared% 
 
 ECHO/
 ECHO No.  User @ IP address    NS Lookup Name
-ECHO [1]  %pi1_user%@%pi1_ip%	%pi1_nicename%
-ECHO [2]  %pi2_user%@%pi2_ip%	%pi2_nicename%
-ECHO [3]  %pi3_user%@%pi3_ip%	%pi3_nicename%
+for /l %%n in (1,1,%LastPi%) do ( 
+			SET sshPI[%%n]=!UserPI[%%n]!@!ipPI[%%n]!
+			SET NiceNamePI[%%n]=Not_Available
+			FOR /f "tokens=2" %%i IN ('nslookup !ipPI[%%n]! 2^>nul ^| findstr /C:"Name"') DO SET NiceNamePI[%%n]=%%i
+			ECHO [%%n]  !sshPI[%%n]!    !NiceNamePI[%%n]!
+			)
 ECHO/
 
-CHOICE /N /C:123 /M "Choose device to backup No.[?] "%1
-ECHO/
 
-IF ERRORLEVEL ==3 GOTO THREE
-IF ERRORLEVEL ==2 GOTO TWO
-IF ERRORLEVEL ==1 GOTO ONE
+:PickPi
+SET /P GetInput= Choose a device number [?] to backup.  
+IF %GetInput% LEQ 0 GOTO BEGIN
+IF %GetInput% LEQ %LastPi% GOTO BKUP_SCRIPT
+IF %GetInput% GTR %LastPi% GOTO BEGIN
 GOTO END
 
 
-:THREE
-SET nicefilename=%pi3_nicename%.img
-SET pi_ssh=%pi3_user%@%pi3_ip%
-GOTO BKUP_SCRIPT
-
-:TWO
-SET nicefilename=%pi2_nicename%.img
-SET pi_ssh=%pi2_user%@%pi2_ip%
-GOTO BKUP_SCRIPT
-
-:ONE
-SET nicefilename=%pi1_nicename%.img
-SET pi_ssh=%pi1_user%@%pi1_ip%
-GOTO BKUP_SCRIPT
-
-
 :BKUP_SCRIPT
+IF !NiceNamePI[%getInput%]!==Not_Available ( ECHO That Device is NOT AVAILABLE choose another.
+  				          GOTO PickPi )											  
+SET sshPI[%getInput%]=!UserPI[%getInput%]!@!ipPI[%getInput%]!
+SET nicefilename=!NiceNamePI[%GetInput%]!.img
+
+ECHO/
 ECHO =============== Backup Remote DISK to Local IMAGE file =================
 ECHO | SET /p dummy = Local Machine\User = 
 whoami
-ECHO DISK SOURCE:       %pi_ssh%  
+ECHO DISK SOURCE:      !sshPI[%getInput%]!  
 ECHO IMG DESTINATION:  %win_shared%/%nicefilename% 
 
 ECHO/
@@ -123,9 +107,11 @@ REM SEE fuser command to stop bust resources.NEED CODE FOR PROCESS START AND KIL
 
 SET piMountBkupScript=" [ ! -d  %pi_winshare% ] && mkdir %pi_winshare% ; sudo mount.cifs %win_shared% %pi_winshare% -o user=%win_user% ; ls -l %pi_winshare% ; echo ; echo START of backup file: %nicefilename%, please wait ; sudo -S dd bs=4M if=/dev/mmcblk0 status=progress of=%pi_winshare%/%nicefilename% ; echo COMPLETED transfer ; sudo umount %pi_winshare% ;  cd ~ ; bash "
 
-ssh -t  %pi_ssh% %piMountBkupScript%
-GOTO END
+ssh -t !sshPI[%getInput%]!  %piMountBkupScript%
+
+
+GOTO BEGIN
 
 :END
-ECHO  Finished Backup upload.
+ECHO  Finished .
 cmd /k
