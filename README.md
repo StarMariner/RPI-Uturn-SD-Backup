@@ -1,9 +1,11 @@
 # RPI-Uturn-SD-Backup
+Please read carefully, this is not 100% fully working, there are some manually required interventions.
+
 Local Windows BAT. SSH to RPI , Back up to Remote Windows Shared Folder. Hence U turn or yoyo if you like.
 
-From Windows Copy a RaspberryPi disk ,creates the output image file on the same Windows Machine.
+From Windows, Copy a RaspberryPi disk ,creates the output image file on the same Windows Machine or another computer.
 
-From windows, sends and executes a script on a remote Raspberry PI via SSH to perform a disk copy.
+From windows, sends and executes a BASH script on a remote Raspberry PI via SSH to perform a disk copy.
 The script makes a directory on the raspberrypi then mounts it , pointing to the remote Windows shared folder. 
 ** WARNING ** 
 If the Windows machine credentials for the shared folder are not correct, you will backup to raspberry pi disk, thats not what we want.
